@@ -14,9 +14,6 @@
  *
  */
 
-/*
- * Definitions for EWTZMU version 2 compass chip.
- */
 #ifndef EWTZMU2_H
 #define EWTZMU2_H
 
@@ -37,12 +34,12 @@
 #define EWTZMU_HPF		            0x80
 
 #define EWTZMU_SMPL         		0x15
-#define EWTZMU_100hz		        0x09  /* 1k/(9+1)=100hz*/
+#define EWTZMU_100hz		        0x09  
 
 #define EWTZMU_FIFO_CTR             0x14
 #define EWTZMU_stream		        0x40
 #define EWTZMU_SAMPLE_100HZ			0x00
-#define EWTZMU_SAMPLE_50HZ			0x01   /*0x01=50hz , 0x13=5hz ,0x04=20hz*/
+#define EWTZMU_SAMPLE_50HZ			0x01   
 #define EWTZMU_SAMPLE_20HZ			0x04
 #define EWTZMU_SAMPLE_16HZ			0x05
 #define EWTZMU_SAMPLE_5HZ			0x13
@@ -51,7 +48,6 @@
 #define EWTZMU_PNT_H				0x02
 #define	EWTZMU_PNT_L				0x00
 
-/* IOCTLs for ewtzmu2 misc. device library */
 #define EWIO						        0x83
 #define EW_IOCTL_SET_INIT              	    _IO(EWIO, 0x01)
 #define EW_IOCTL_SET_STANDBY				_IO(EWIO, 0x02)
@@ -87,7 +83,6 @@
 #define EW_IOCTL_WRITE_I2CADDR				_IOW(EWIO, 0x1F, int)
 #define EW_IOCTL_READ_I2CDATA				_IOR(EWIO, 0x20, int)
 
-/* IOCTLs for ewtzmu2 middleware misc. device library */
 #define EWDAEIO						       0x84
 #define EWDAE_IOCTL_SET_INIT				_IO(EWDAEIO, 0x01)
 #define EWDAE_IOCTL_SET_STANDBY				_IO(EWDAEIO, 0x02)
@@ -107,19 +102,18 @@
 #define EWDAE_IOCTL_GET_AXISINTERFERENCE	_IOR(EWDAEIO, 0x0F, int)
 #define EWDAE_IOCTL_SET_SAMPLERATE			_IOW(EWDAEIO, 0x10, int)
 #define EWDAE_IOCTL_GET_DIRPOLARITY			_IOR(EWDAEIO, 0x11, int)
-#define EWDAE_IOCTL_GET_AKM_DATA			_IOR(EWDAEIO, 0x12, short[12])/*for hTC akm data*/
+#define EWDAE_IOCTL_GET_AKM_DATA			_IOR(EWDAEIO, 0x12, short[12])
 #define EWDAE_IOCTL_SET_ROTATION_VECTOR		_IOW(EWDAEIO, 0x14, int)
 #define EWDAE_IOCTL_SET_LINEAR_ACCEL		_IOW(EWDAEIO, 0x15, int)
 #define EWDAE_IOCTL_SET_GRAVITY				_IOW(EWDAEIO, 0x16, int)
 #define EWDAE_IOCTL_GET_AKM_READY			_IOR(EWDAEIO, 0x17, int)
-#define EWDAE_IOCTL_GET_GYRO_CAL_DATA			_IOR(EWDAEIO, 0x18, unsigned char[12])/*for hTC Gyro cal data for emmc*/
+#define EWDAE_IOCTL_GET_GYRO_CAL_DATA			_IOR(EWDAEIO, 0x18, unsigned char[12])
 
 #define EWDAE_IOCTL_WRITE_I2CDATA			_IOW(EWDAEIO, 0x19, int)
 #define EWDAE_IOCTL_WRITE_I2CADDR			_IOW(EWDAEIO, 0x1A, int)
 #define EWDAE_IOCTL_READ_I2CDATA			_IOR(EWDAEIO, 0x1B, int)
 
 
-/* IOCTLs for ewtzmu2 HAL misc. device library */
 #define EWHALIO						   0x85
 #define EWHAL_IOCTL_GET_SENSORDATA     _IOR(EWHALIO, 0x01, int)
 #define EWHAL_IOCTL_GET_POSTURE        _IOR(EWHALIO, 0x02, int)
@@ -143,7 +137,6 @@
 #define EW_REPORT_EN_COMPASS        1
 #define EW_REPORT_EN_GYROSCOPE      2
 
-/* Define items in Control-Byte */
 #define EW_CB_LENGTH			10
 #define EW_CB_LOOPDELAY			 0
 #define EW_CB_RUN				 1
@@ -156,7 +149,6 @@
 #define EW_CB_ALGORITHMLOG		 8
 #define EW_CB_UNDEFINE_1		 9
 
-/* Define items in DirPolar-Byte */
 #define EW_DP_LENGTH			 6
 #define EW_DP_ACC_DIR			 0
 #define EW_DP_ACC_POLARITY		 1
@@ -165,7 +157,6 @@
 #define EW_DP_GYRO_DIR			 4
 #define EW_DP_GYRO_POLARITY		 5
 
-/* Pedometer Parameters */
 #define EW_PD_LENGTH			10
 #define EW_PD_PRARM_IIR1		 0
 #define EW_PD_PRARM_IIR2		 1
@@ -178,7 +169,6 @@
 #define EW_PD_UNDEFINE_1		 8
 #define EW_PD_UNDEFINE_2		 9
 
-/* Define Panasonic Sensor Type */
 #define EW_ACCELEROMETER_SENSOR	    0
 #define EW_MAGNETIC_FIELD_SENSOR	1
 #define EW_ORIENTATION_SENSOR		2

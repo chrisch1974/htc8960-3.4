@@ -48,11 +48,9 @@
 
 static DEFINE_MUTEX(reload_lock);
 
-/* config_setting */
 #define NONE                                    0
 #define CONNECTED                               1
 
-/* anti-touch calibration */
 #define RECALIB_NEED                            0
 #define RECALIB_NG                              1
 #define RECALIB_UNLOCK                          2
@@ -63,6 +61,7 @@ static DEFINE_MUTEX(reload_lock);
 struct atmel_ts_data {
 	struct i2c_client *client;
 	struct input_dev *input_dev;
+	struct input_dev *sr_input_dev;
 	struct workqueue_struct *atmel_wq;
 	struct workqueue_struct *atmel_delayed_wq;
 	struct workqueue_struct *atmel_cable_vbus_wq;
@@ -252,6 +251,77 @@ static uint8_t get_rid(struct atmel_ts_data *ts, uint8_t object_type)
 }
 
 #ifdef ATMEL_EN_SYSFS
+
+enum SR_REG_STATE{
+	ALLOCATE_DEV_FAIL = -2,
+	REGISTER_DEV_FAIL,
+	SUCCESS,
+};
+
+static int register_sr_touch_device(void)
+{
+	struct atmel_ts_data *ts = private_ts;
+
+	ts->sr_input_dev = input_allocate_device();
+
+	if (ts->sr_input_dev == NULL) {
+		printk(KERN_ERR "[TP][TOUCH_ERR]%s: Failed to allocate SR input device\n", __func__);
+		return ALLOCATE_DEV_FAIL;
+	}
+	ts->sr_input_dev->name = "sr_touchscreen";
+	set_bit(EV_SYN, ts->sr_input_dev->evbit);
+	set_bit(EV_ABS, ts->sr_input_dev->evbit);
+	set_bit(EV_KEY, ts->sr_input_dev->evbit);
+
+	set_bit(KEY_BACK, ts->sr_input_dev->keybit);
+	set_bit(KEY_HOME, ts->sr_input_dev->keybit);
+	set_bit(KEY_MENU, ts->sr_input_dev->keybit);
+	set_bit(KEY_SEARCH, ts->sr_input_dev->keybit);
+	set_bit(BTN_TOUCH, ts->sr_input_dev->keybit);
+	set_bit(KEY_APP_SWITCH, ts->sr_input_dev->keybit);
+	set_bit(INPUT_PROP_DIRECT, ts->sr_input_dev->propbit);
+	ts->sr_input_dev->mtsize = ts->finger_support;
+	input_set_abs_params(ts->sr_input_dev, ABS_MT_TRACKING_ID,
+		0, ts->finger_support - 1, 0, 0);
+	printk(KERN_INFO "[TP][SR]input_set_abs_params: mix_x %d, max_x %d,"
+		" min_y %d, max_y %d\n", ts->abs_x_min, ts->abs_x_max,
+		ts->abs_y_min, ts->abs_y_max);
+
+	input_set_abs_params(ts->sr_input_dev, ABS_MT_POSITION_X,
+				ts->abs_x_min, ts->abs_x_max, 0, 0);
+	input_set_abs_params(ts->sr_input_dev, ABS_MT_POSITION_Y,
+				ts->abs_y_min, ts->abs_y_max, 0, 0);
+	input_set_abs_params(ts->sr_input_dev, ABS_MT_TOUCH_MAJOR,
+				0, 255, 0, 0);
+	input_set_abs_params(ts->sr_input_dev, ABS_MT_WIDTH_MAJOR,
+				0, 30, 0, 0);
+	input_set_abs_params(ts->sr_input_dev, ABS_MT_PRESSURE,
+				0, 30, 0, 0);
+
+	if (input_register_device(ts->sr_input_dev)) {
+                input_free_device(ts->sr_input_dev);
+		printk(KERN_ERR "[TP][SR][TOUCH_ERR]%s: Unable to register %s input device\n",
+			__func__, ts->sr_input_dev->name);
+		return REGISTER_DEV_FAIL;
+	}
+	return SUCCESS;
+}
+
+static ssize_t set_en_sr(struct device *dev, struct device_attribute *attr,
+						const char *buf, size_t count)
+{
+	struct atmel_ts_data *ts = private_ts;
+	if (buf[0]) {
+		if (ts->sr_input_dev)
+			printk(KERN_INFO "[TP]%s: SR device already exist!\n", __func__);
+		else
+			printk(KERN_INFO "[TP]%s: SR touch device enable result:%X\n", __func__, register_sr_touch_device());
+	}
+	return count;
+}
+
+static DEVICE_ATTR(sr_en, S_IWUSR, 0, set_en_sr);
+
 static ssize_t atmel_reset(struct device *dev, struct device_attribute *attr,
 			     const char *buf, size_t count)
 {
@@ -598,7 +668,7 @@ static ssize_t atmel_diag_show(struct device *dev,
 			} else {
 				rawdata = data[loop_j+1] << 8 | data[loop_j];
 				if (ts_data->diag_command == T6_CFG_DIAG_CMD_REF)
-					rawdata -= 0x4000; /* 16384 */
+					rawdata -= 0x4000; 
 				count += sprintf(buf + count, "%6d", rawdata);
 				if (((loop_i * 64 + loop_j / 2) % y) == (y - 1))
 					count += sprintf(buf + count, "\n");
@@ -649,7 +719,7 @@ static ssize_t atmel_unlock_store(struct device *dev,
 		ts_data->valid_press_timeout = jiffies + msecs_to_jiffies(15);
 		if (ts_data->finger_count == 0)
 			ts_data->valid_pressed_cnt = 1;
-		else /* unlock direction: left to right */
+		else 
 			ts_data->valid_pressed_cnt = 0;
 
 		ts_data->cal_after_unlock = 0;
@@ -755,6 +825,11 @@ static int atmel_touch_sysfs_init(void)
 		printk(KERN_ERR "[TP]TOUCH_ERR: create_file info failed\n");
 		return ret;
 	}
+	ret = sysfs_create_file(android_touch_kobj, &dev_attr_sr_en.attr);
+	if (ret) {
+		printk(KERN_ERR "[TP]TOUCH_ERR: create_file SR_EN failed\n");
+		return ret;
+	}
 
 	return 0;
 }
@@ -773,6 +848,7 @@ static void atmel_touch_sysfs_deinit(void)
 	sysfs_remove_file(android_touch_kobj, &dev_attr_htc_event.attr);
 	sysfs_remove_file(android_touch_kobj, &dev_attr_disable_touch.attr);
 	sysfs_remove_file(android_touch_kobj, &dev_attr_reset.attr);
+	sysfs_remove_file(android_touch_kobj, &dev_attr_sr_en.attr);
 	kobject_del(android_touch_kobj);
 }
 
@@ -805,7 +881,7 @@ static int check_delta_full(struct atmel_ts_data *ts,
 				get_object_address(ts, DIAGNOSTIC_T37), data, 2);
 		}
 		if (loop_j == 10)
-			printk(KERN_ERR "[TP]TOUCH_ERR:%s: Diag data not ready\n", __func__);
+			printk(KERN_WARNING "[TP]%s: Diag data not ready\n", __func__);
 
 		i2c_atmel_read(ts->client,
 			get_object_address(ts, DIAGNOSTIC_T37),
@@ -1125,12 +1201,12 @@ static void htc_input_report(struct input_dev *idev,
 				struct atmel_finger_data *fdata, uint8_t press, uint8_t last)
 {
 	if (!press) {
-	  //		input_report_abs(idev, ABS_MT_AMPLITUDE, 0);
-	  //		input_report_abs(idev, ABS_MT_POSITION, BIT(31));
+		input_report_abs(idev, ABS_MT_AMPLITUDE, 0);
+		input_report_abs(idev, ABS_MT_POSITION, BIT(31));
 	} else {
-	  //		input_report_abs(idev, ABS_MT_AMPLITUDE, fdata->z << 16 | fdata->w);
-	  //		input_report_abs(idev, ABS_MT_POSITION,
-	  //			(last ? BIT(31) : 0) | fdata->x << 16 | fdata->y);
+		input_report_abs(idev, ABS_MT_AMPLITUDE, fdata->z << 16 | fdata->w);
+		input_report_abs(idev, ABS_MT_POSITION,
+			(last ? BIT(31) : 0) | fdata->x << 16 | fdata->y);
 	}
 }
 
@@ -1327,7 +1403,7 @@ static void atmel_ts_unlock_work_func(struct work_struct *work)
 		else {
 			if (ret == 0)
 				confirm_calibration(ts, 0, 2);
-			else /* retry, schedule next work */
+			else 
 				queue_delayed_work(ts->atmel_delayed_wq, &ts->unlock_work,
 					msecs_to_jiffies(ATCHCAL_DELAY));
 		}
@@ -1714,7 +1790,7 @@ static int atmel_224e_ts_probe(struct i2c_client *client,
 
 	htc_event_enable = 0;
 
-	/* read message*/
+	
 	msg[0].addr = ts->client->addr;
 	msg[0].flags = I2C_M_RD;
 	msg[0].len = 7;
@@ -1757,7 +1833,7 @@ static int atmel_224e_ts_probe(struct i2c_client *client,
 		}
 	}
 
-	/* Read the info block data. */
+	
 	ts->id = kzalloc(sizeof(struct info_id_t), GFP_KERNEL);
 	if (ts->id == NULL) {
 		printk(KERN_ERR "[TP]TOUCH_ERR: allocate info_id_t failed\n");
@@ -1784,7 +1860,7 @@ static int atmel_224e_ts_probe(struct i2c_client *client,
 	if (cfgdata[0])
 		pr_info("[TP]reg[258]=%x\n", cfgdata[0]);
 
-	/* Read object table. */
+	
 	ret = read_object_table(ts);
 	if (ret < 0)
 		goto err_alloc_failed;
@@ -1849,7 +1925,7 @@ static int atmel_224e_ts_probe(struct i2c_client *client,
 				ts->high_res_x_en = 1;
 			if (y_range >= 1024)
 				ts->high_res_y_en = 1;
-		} else { /* Switches the X and Y */
+		} else { 
 			if (x_range >= 1024)
 				ts->high_res_y_en = 1;
 			if (y_range >= 1024)
@@ -1861,7 +1937,7 @@ static int atmel_224e_ts_probe(struct i2c_client *client,
 			ts->high_res_x_en ? ", x: 12-bit" : "",
 			ts->high_res_y_en ? ", y: 12-bit" : "");
 
-		/* infoamtion block CRC check */
+		
 		if (pdata->object_crc[0]) {
 			ret = i2c_atmel_write_byte_data(client,
 						get_object_address(ts, GEN_COMMANDPROCESSOR_T6) +
@@ -2226,10 +2302,10 @@ static int atmel_224e_ts_probe(struct i2c_client *client,
 	input_set_abs_params(ts->input_dev, ABS_MT_PRESSURE,
 				ts->abs_pressure_min, ts->abs_pressure_max,
 				0, 0);
-	//	input_set_abs_params(ts->input_dev, ABS_MT_AMPLITUDE,
-	//		0, ((ts->abs_pressure_max << 16) | ts->abs_width_max), 0, 0);
-	//	input_set_abs_params(ts->input_dev, ABS_MT_POSITION,
-	//		0, (BIT(31) | (ts->abs_x_max << 16) | ts->abs_y_max), 0, 0);
+	input_set_abs_params(ts->input_dev, ABS_MT_AMPLITUDE,
+		0, ((ts->abs_pressure_max << 16) | ts->abs_width_max), 0, 0);
+	input_set_abs_params(ts->input_dev, ABS_MT_POSITION,
+		0, (BIT(31) | (ts->abs_x_max << 16) | ts->abs_y_max), 0, 0);
 
 	ret = input_register_device(ts->input_dev);
 	if (ret) {
@@ -2303,6 +2379,8 @@ static int atmel_224e_ts_remove(struct i2c_client *client)
 
 	destroy_workqueue(ts->atmel_delayed_wq);
 	destroy_workqueue(ts->atmel_wq);
+	if (ts->sr_input_dev != NULL)
+		input_unregister_device(ts->sr_input_dev);
 	input_unregister_device(ts->input_dev);
 	kfree(ts);
 
