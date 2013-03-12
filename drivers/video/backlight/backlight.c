@@ -237,22 +237,7 @@ static void bl_device_release(struct device *dev)
 	kfree(bd);
 }
 
-static ssize_t backlight_cabc_level_ctl_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
-{
-	return 0;
-}
-
-static ssize_t backlight_cabc_level_ctl_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	return snprintf(buf, 4, "%u\n", 0);
-}
-
 static struct device_attribute bl_device_attributes[] = {
-#ifdef CONFIG_FB_MSM_CABC
-	__ATTR(cabc_level_ctl, 0644, backlight_cabc_level_ctl_show, backlight_cabc_level_ctl_store),
-#endif
 	__ATTR(bl_power, 0644, backlight_show_power, backlight_store_power),
 	__ATTR(brightness, 0644, backlight_show_brightness,
 		     backlight_store_brightness),
