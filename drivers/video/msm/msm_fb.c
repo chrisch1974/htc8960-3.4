@@ -237,8 +237,21 @@ static ssize_t app_list_value_show(struct device *dev,
 	return ret;
 }
 
+static unsigned cabc_value = 0;
+
+static ssize_t cabc_value_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	ssize_t ret =0;
+	sprintf(buf,"%u\n", cabc_value);
+	ret = strlen(buf) + 1;
+	return ret;
+}
+
 #define BACKLIGHT_ATTR(name) __ATTR(name, 0644, app_list_value_show, NULL)
+#define CABC_ATTR(name) __ATTR(name, 0644, cabc_value_show, NULL)
 static struct device_attribute app_attr = BACKLIGHT_ATTR(backlight_info);
+static struct device_attribute cabc_attr = CABC_ATTR(cabc_level_ctl);
 
 
 static struct msm_fb_platform_data *msm_fb_pdata;
@@ -468,6 +481,9 @@ static int msm_fb_probe(struct platform_device *pdev)
 		err = device_create_file(backlight_led.dev, &app_attr);
 		if (err)
 			device_remove_file(&pdev->dev, &app_attr);
+		err = device_create_file(backlight_led.dev, &cabc_attr);
+		if (err)
+			device_remove_file(&pdev->dev, &cabc_attr);
 	}
 
 	pdev_list[pdev_list_cnt++] = pdev;
