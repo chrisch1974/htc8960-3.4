@@ -38,12 +38,12 @@ extern struct gpio_regulator_platform_data
 
 extern struct platform_device msm8960_device_ext_5v_vreg __devinitdata;
 extern struct platform_device msm8960_device_ext_l2_vreg __devinitdata;
+extern struct platform_device msm8960_device_rpm_regulator __devinitdata;
+
 extern struct pm8xxx_regulator_platform_data
 	msm_pm8921_regulator_pdata[] __devinitdata;
 
 extern int msm_pm8921_regulator_pdata_len __devinitdata;
-
-extern struct rpm_regulator_platform_data ville_rpm_regulator_pdata __devinitdata;
 
 #define GPIO_VREG_ID_EXT_5V		0
 #define GPIO_VREG_ID_EXT_L2		1
