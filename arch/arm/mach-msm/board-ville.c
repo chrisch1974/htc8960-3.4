@@ -2779,14 +2779,6 @@ static struct platform_device scm_memchk_device = {
 	.id		= -1,
 };
 
-static struct platform_device ville_device_rpm_regulator __devinitdata = {
-	.name	= "rpm-regulator",
-	.id	= -1,
-	.dev	= {
-		.platform_data = &ville_rpm_regulator_pdata,
-	},
-};
-
 #define MSM_RAM_CONSOLE_BASE   MSM_HTC_RAM_CONSOLE_PHYS
 #define MSM_RAM_CONSOLE_SIZE   MSM_HTC_RAM_CONSOLE_SIZE
 
@@ -3482,7 +3474,7 @@ static void __init ville_init(void)
 	regulator_suppress_info_printing();
 	if (msm_xo_init())
 		pr_err("Failed to initialize XO votes\n");
-	platform_device_register(&ville_device_rpm_regulator);
+	platform_device_register(&msm8960_device_rpm_regulator);
 	msm_clock_init(&msm8960_clock_init_data);
 	android_usb_pdata.swfi_latency = msm_rpmrs_levels[0].latency_us;
 	msm8960_device_otg.dev.platform_data = &msm_otg_pdata;
